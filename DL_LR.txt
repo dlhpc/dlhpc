@@ -1,0 +1,53 @@
+import pandas as pd
+import numpy as np
+from sklearn import metrics
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.linear_model import LinearRegression
+pip install tensorflow
+df = pd.read_csv("Boston - Boston.csv")
+corr =df.corr()
+corr
+X = df.drop(['medv'],axis=1)
+X
+y=df['medv']
+y
+X_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.3,random_state=4)
+scaler=MinMaxScaler()
+scaler.fit(X_train)
+
+X_train =scaler.transform(X_train)
+X_test=scaler.transform(X_test)
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Dropout
+
+model = Sequential()
+model.add(Dense(64,input_dim=14,activation='relu'))
+model.add(Dropout(0.15))
+model.add(Dense(64,activation='relu'))
+model.add(Dropout(0.2))
+model.add(Dense(40,activation='relu'))
+model.add(Dropout(0.15))
+model.add(Dense(54,activation='relu'))
+model.add(Dropout(0.18))
+model.add(Dense(1))
+
+model.compile(optimizer='adam',loss='mean_squared_error',metrics=['mse','mae'])
+history = model.fit(X_train,y_train,validation_split=0.2,epochs=200)
+
+Y_pred = model.predict(X_test)
+Y_pred
+
+from sklearn.metrics import r2_score
+'r2_score:',r2_score(y_test,Y_pred)
+
+lm =LinearRegression()
+lm.fit(X_train,y_train)
+lm.intercept_
+y_pred=lm.predict(X_train)
+y_pred
+'r2:',metrics.r2_score(y_train,y_pred)
+
+

@@ -1,0 +1,97 @@
+import pandas as pd
+import numpy as np
+import warnings
+import datetime
+import dateutil
+from sklearn import metrics 
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import LSTM
+from tensorflow.keras.layers import Dense
+
+data = pd.read_csv("Google_Stock_Price_Train.csv")
+
+# use for removing comma in volume column
+data['Close']=data['Close'].str.replace(',','').astype(float)
+data['Volume']=data['Volume'].str.replace(',','').astype(float)
+data.isnull().sum()
+data.hist()
+
+scaler=MinMaxScaler()
+data_without_date=data[['Open','High','Low','Close','Volume']]
+data_scaled= pd.DataFrame(scaler.fit_transform(data_without_date))
+data_scaled
+data_scaled.hist()
+
+
+
+data_scaled = data_scaled.drop([1,2,4],axis=1)
+data_scaled
+
+# finding timestep and patterns in datapts
+
+def split_seq_multivariate(sequence, n_past, n_future):
+    
+    '''
+    n_past ==> no of past observations
+    n_future ==> no of future observations 
+    '''
+    x, y = [], [] 
+    for window_start in range(len(sequence)):
+        past_end = window_start + n_past
+        future_end = past_end + n_future
+        if future_end > len(sequence):
+            break
+        # slicing the past and future parts of the window
+        past   = sequence[window_start:past_end, :]
+        future = sequence[past_end:future_end, -1]
+        x.append(past)
+        y.append(future)
+    
+    return np.array(x), np.array(y)
+
+
+n_steps = 60
+
+data_scaled = data_scaled.to_numpy()
+data_scaled.shape
+
+
+
+# split into samples
+X, y = split_seq_multivariate(data_scaled, n_steps,1)
+
+
+# split into train/test
+X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.2,random_state=50)
+
+print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
+
+# further dividing the training set into train and validation data
+X_train, X_val, y_train, y_val = train_test_split(X_train,y_train,test_size=0.2,random_state=30)
+
+print(X_train.shape, X_val.shape, y_train.shape, y_val.shape)
+
+# define RNN model
+model = Sequential()
+model.add(LSTM(612, input_shape=(n_steps,2)))
+model.add(Dense(50, activation='relu'))
+model.add(Dense(50, activation='relu'))
+model.add(Dense(30, activation='relu'))
+model.add(Dense(1))
+
+model.summary()
+# compile the model
+model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+# fit the model
+history = model.fit(X_train, y_train, epochs=250, batch_size=32, verbose=2, validation_data=(X_val, y_val))  # has used mini batch learning, with batch_s
+
+# predicting y_test values
+print(X_test.shape)
+predicted_values = model.predict(X_test)
+print(predicted_values.shape)
+# print(predicted_values)
+
+     
